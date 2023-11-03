@@ -1,0 +1,6 @@
+# directories to ignore
+.vscode/
+build/
+opencv-4.x/
+# files to ignore
+CMakeLists.txt
