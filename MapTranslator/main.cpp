@@ -26,7 +26,7 @@ struct Segment {
     Segment(int a1, int b1, int a2, int b2) : p0(a1, b1), p1(a2, b2) {}
 };
 
-// Specialization of the defined types within the boost::polygon namespace 
+// Specialize the defined types within the boost::polygon namespace 
 namespace boost {
     namespace polygon {
         template <>
@@ -58,7 +58,7 @@ namespace boost {
     }
 }
 
-// Extraction of the vertices of a Voronoi cell
+// Extract the vertices of a Voronoi cell
 std::vector<Point> get_vertices(VoronoiCell* cell) {                                     // arguments :  a Voronoi cell (ptr)
     std::vector<Point> vertices;                                                         // initialize an empty vector of Points
     const VoronoiEdge* edge = cell->incident_edge();                                     // choose one edge as a reference
@@ -70,7 +70,7 @@ std::vector<Point> get_vertices(VoronoiCell* cell) {                            
     return vertices;                                                                     // return the vector 
 }
 
-// Extraction of the neighbour points of a Voronoi cell
+// Extract the neighbour points of a Voronoi cell
 std::vector<Point> get_neighbors(VoronoiCell* cell, std::vector<Point>* points) {       // arguments: a Voronoi cell and a set of points (ptr)
     std::vector<Point> neighbors;                                                       // initialize an empty vector of points
     const VoronoiEdge* edge = cell->incident_edge();                                    // iterate over the edges as in 'get_vertices'
@@ -84,7 +84,7 @@ std::vector<Point> get_neighbors(VoronoiCell* cell, std::vector<Point>* points) 
     return neighbors;                                                                   // return the vector of neighbours
 }
 
-// Creation of a string representing a Polygon with its vertices
+// Create a string representing a Polygon with its vertices
 std::string polygonString(std::vector<Point> vertices) {                                // arguments : a set of vertices of a polygon
     std::ostringstream string;                                                          // initialize a string (can be constructed using the insertion operator)
     string << "POLYGON((";                                                              // begin with the header POLYGON
@@ -96,7 +96,7 @@ std::string polygonString(std::vector<Point> vertices) {                        
     return string.str();                                                                // returns a string of the form "POLYGON ((0 0, 1 0, 1 1, 0 1))"
 }
 
-// Computation of the area of the intersection of two sets of vertices representing polygons
+// Compute the area of the intersection of two sets of vertices representing polygons
 double find_intersection_area(std::vector<Point> vertices1, std::vector<Point> vertices2) { //arguments: two sets of vertices
     std::string string1 = polygonString(vertices1);                                         //create the string polygon (in well-known text) for each set of vertices
     std::string string2 = polygonString(vertices2);
@@ -111,7 +111,7 @@ double find_intersection_area(std::vector<Point> vertices1, std::vector<Point> v
     return 0;                                                                               // fallback: if no intersection is found, return 0
 }
 
-// Computation of the area of a polygon formed by a set of vertices
+// Compute the area of a polygon formed by a set of vertices
 double find_full_area(std::vector<Point> vertices) {                                         // arguments : a set of vertices
     double area = 0.0;                                                                       // initialize area to 0.0 
     size_t n = vertices.size();
@@ -125,47 +125,49 @@ double find_full_area(std::vector<Point> vertices) {                            
     return std::abs(area)/2;                                                                 // use the shoelace formula to return the final area
 }
 
-uchar calculate_intensity(VoronoiCell* newCell, std::vector<Point>* newPoints, std::vector<Point>* points,VoronoiDiagram* vd, cv::Mat* img) {
-    uchar intensity = 0;
-    std::vector<Point> vertices = get_vertices(newCell);
-    double area = find_full_area(vertices);
-    std::vector<Point> neighbors = get_neighbors(newCell, newPoints);
-    for (const auto& neighbor : neighbors) {
-        uchar neighborIntensity = img->at<uchar>(neighbor.y, neighbor.x);
-        VoronoiCell neighborCell = (*newCell);
-        for (const auto& cell : vd->cells()) {
-            if((*points)[cell.source_index()].x == neighbor.x && (*points)[cell.source_index()].y == neighbor.y) {
-                VoronoiCell neighborCell = cell;
+//Update the intensity of a Voronoi cell based on the intensity of its neighbours
+uchar calculate_intensity(VoronoiCell* newCell, std::vector<Point>* newPoints, std::vector<Point>* points,VoronoiDiagram* vd, cv::Mat* img) { // arguments : 
+    uchar intensity = 0;                                                                      // initialize intensity to 0
+    std::vector<Point> vertices = get_vertices(newCell);                                      // retrieve vertices of the Voronoi cell using get_vertices 
+    double area = find_full_area(vertices);                                                   // retrieve the area of the V cell using find_full_area on the obtained vertices
+    std::vector<Point> neighbors = get_neighbors(newCell, newPoints);                         // retrieve the neighbours of the cell among the candidates newPoints
+    for (const auto& neighbor : neighbors) {                                                  // iterate over each neighbours:
+        uchar neighborIntensity = img->at<uchar>(neighbor.y, neighbor.x);                     // retrieve the intensity value from the image matrix at the corresponding pixel coordinates
+        VoronoiCell neighborCell = (*newCell);                                                // find the Voronoi cell corresponding to the current neighbor :
+        for (const auto& cell : vd->cells()) {                                                // iterate through all cells in the Voronoi diagram 
+            if((*points)[cell.source_index()].x == neighbor.x && (*points)[cell.source_index()].y == neighbor.y) { // if a cell matches the coordinates of the neighbor point:
+                VoronoiCell neighborCell = cell;                                               // set the neighborCell variable to that cell.
             }
         }
-        std::vector<Point> neighborVertices = get_vertices(&neighborCell);
-        double neighborIntersection = find_intersection_area(vertices, neighborVertices);
-        intensity += (neighborIntensity * neighborIntersection / area);
+        std::vector<Point> neighborVertices = get_vertices(&neighborCell);                     // retrieve the vertices of the neighboring cell
+        double neighborIntersection = find_intersection_area(vertices, neighborVertices);      // calculate the intersection area between the current cell and its neighbor using find_intersection_area
+        intensity += (neighborIntensity * neighborIntersection / area);                        // update the overall intensity based on the neighbor's intensity, the intersection area, and the current cell's area
     }
-    return intensity;
+    return intensity;                                                                          // return the accumulated intensity of the Voronoi cell
 }
 
-void add_point(std::vector<Point>* points, VoronoiDiagram* vd, cv::Mat* img) {
-    Point newPoint(1+rand()%(img->cols-2), 1+rand()%(img->rows-2));
-    std::vector<Point> newPoints(*points); 
-    newPoints.push_back(newPoint);
-    std::vector<Segment> segments;
-    segments.push_back(Segment(0, 0, img->cols, 0));
-    segments.push_back(Segment(img->cols, 0, img->cols, img->rows));
+// Add a random point to a set of points, update the Voronoi diagram, and check if the intensity of the new point matches the expected intensity based on its neighbors
+void add_point(std::vector<Point>* points, VoronoiDiagram* vd, cv::Mat* img) {                 // arguments : the current point sample, the Voronoi diagram, an image (an openCV matrix)
+    Point newPoint(1+rand()%(img->cols-2), 1+rand()%(img->rows-2));                            // generate a random point within the interior of the image using the rand() function.
+    std::vector<Point> newPoints(*points);                                                     // create a copy of the existing points 
+    newPoints.push_back(newPoint);                                                             // add the newly generated point to the copy
+    std::vector<Segment> segments;                                                             // create a set of segments 
+    segments.push_back(Segment(0, 0, img->cols, 0));                                           // the four segments form a rectangle = the boudary of the image
+    segments.push_back(Segment(img->cols, 0, img->cols, img->rows));                           
     segments.push_back(Segment(img->cols, img->rows, 0, img->rows));
     segments.push_back(Segment(0, img->rows, 0, 0));
-    VoronoiDiagram new_vd;
-    boost::polygon::construct_voronoi(newPoints.begin(), newPoints.end(), segments.begin(), segments.end(), &new_vd);
-    VoronoiCell newCell = new_vd.cells().back();
-    for (const auto& cell : new_vd.cells()) {
-        if(newPoints[cell.source_index()].x == newPoint.x && newPoints[cell.source_index()].y == newPoint.y) {
-            newCell = cell;
+    VoronoiDiagram new_vd;                                                                     // initialize a new Voronoi diagram
+    boost::polygon::construct_voronoi(newPoints.begin(), newPoints.end(), segments.begin(), segments.end(), &new_vd); // construct the new diagram using the new set of points and the bounding segments
+    VoronoiCell newCell = new_vd.cells().back();                                               // initialize a new Voronoi cell in order to : 
+    for (const auto& cell : new_vd.cells()) {                                                  // search over the Voronoi cells of the new diagram
+        if(newPoints[cell.source_index()].x == newPoint.x && newPoints[cell.source_index()].y == newPoint.y) { // look for the cell corresponding to the new point
+            newCell = cell;                                                                    // and retrieve it 
         }
     }
-    uchar realIntensity = img->at<uchar>(newPoint.y, newPoint.x);
-    uchar expectedIntensity = calculate_intensity(&newCell, &newPoints, points, vd, img);
-    if (std::abs(realIntensity - expectedIntensity) > 5) {
-        points->push_back(newPoint);
+    uchar realIntensity = img->at<uchar>(newPoint.y, newPoint.x);                              // retrieve the real intensity value of the newly added point from the image 
+    uchar expectedIntensity = calculate_intensity(&newCell, &newPoints, points, vd, img);      // calculate the expected intensity using calculate_intensity  __ why not use the new_vd instead of vd??
+    if (std::abs(realIntensity - expectedIntensity) > 5) {                                     // compare the absolute difference between the real and expected intensity values
+        points->push_back(newPoint);                                                           // if the difference is significant, add the new point to the original set of points
     }
 }
 
