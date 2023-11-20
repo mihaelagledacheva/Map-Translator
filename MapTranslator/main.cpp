@@ -3,6 +3,7 @@
 #include <sstream>
 #include <vector>
 #include <opencv2/opencv.hpp>
+#include <opencv2/imgproc.hpp>
 #include <boost/foreach.hpp>
 #include <boost/geometry.hpp>
 #include <boost/polygon/voronoi.hpp>
@@ -186,6 +187,10 @@ int main() {
     segments.push_back(Segment(img.cols, img.rows, 0, img.rows));
     segments.push_back(Segment(0, img.rows, 0, 0));
     VoronoiDiagram vd;                                                                         // initialize the Voronoi diagram (vd)
+  
+    //std::vector<std::vector<cv::Point>> contours;
+    //cv::findContours(img, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);             // find contours of the original image 
+                                                                  
     construct_voronoi(points.begin(), points.end(), segments.begin(), segments.end(), &vd);    // construct the initial Voronoi diagram using the empty set of points and the bounding box segments
     for (int i = 0; i < 5; ++i) {                                                              // iterate 5 times: 
         for (int i = 0; i < 500; ++i) {                                                        //    iterate 500 times:
@@ -200,6 +205,9 @@ int main() {
                     cv::Point(edge.vertex1()->x(), edge.vertex1()->y()), cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
             }
         }
+         //cv::drawContours(copy, contours, -1, cv::Scalar(255,0,0), 2, cv::LINE_AA);           //    draw contours on the image copy _ to modify parameters : (copy, contours, contourIndex, color, thickness, linetype)
+                                                                                               //    contourIndex : e.g -1 for "draw all contours" ; color: cv::Scalar(B,G,R) ; tickness : n pixels ; linetype : e.g  anti-aliased lines
+        
         std::string name = "voronoi_cells_" + std::to_string(i+1) + ".jpg";                    //    save the resulting image in voronoi_diagram_nbOfIteration
         imwrite(name, copy);
     }
