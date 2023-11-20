@@ -10,7 +10,6 @@ https://docs.google.com/document/d/12jGmhHy2zh67J_WpTOkt1yA4MaFLO7MbK4U43IU0HuQ/
 Implementation of the initial version of the algorithm for adding points: generate a random point within the map, compute expected intensity based on its neighbors, compare to the actual intensity and if the difference is more than x=5 add the new point to the Voronoi diagram; repeat y=5*500 times.
 
 **Next steps:**
-* add annotations to the existing code
 * test the correctness of the current algorithm and improve its efficiency
 * formally describe the methodology for the report
 * find optimal parameters (maximum difference in intensity x, number of points added y)
@@ -32,7 +31,8 @@ A single main.cpp file (located in MapTranslator_VSCode) which opens a map, sele
 * test the current set-up on another device
 * create separate header/source files for the different parts of the project
 * explore the built-in methods offered by boost
-* begin implementing the algorithm for adding points 
+* begin implementing the algorithm for adding points
+*  add annotations to the existing code
 
 ***
 
