@@ -8,6 +8,7 @@ https://docs.google.com/document/d/12jGmhHy2zh67J_WpTOkt1yA4MaFLO7MbK4U43IU0HuQ/
 <img src="https://github.com/mihaelagledacheva/Map-Translator/assets/113371744/296011ea-0680-4306-a16d-27b00694ca74" style="display:inline-block; width:30%;">
 
 Implementation of the initial version of the algorithm for adding points: generate a random point within the map, compute expected intensity based on its neighbors, compare to the actual intensity and if the difference is more than x=5 add the new point to the Voronoi diagram; repeat y=5*500 times.
+
 Currently : spatial interpolation where we are estimating the intensity at a particular point based on the intensities of nearby points.
 Whereas in the natural neighbours interpolation: the weights assigned to neighboring points are determined by their proximity to the point where we want to interpolate, and the interpolation is a weighted average. To replace our interpolation with NN, we would need to modify the calculate_intensity function 
 (and where it is called) either by : 
