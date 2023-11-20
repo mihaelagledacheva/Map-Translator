@@ -171,36 +171,36 @@ void add_point(std::vector<Point>* points, VoronoiDiagram* vd, cv::Mat* img) {  
     }
 }
 
+//From an input image of a map, generate and visualize the Voronoi diagrams in 5 output images voronoi_cells_n
 int main() {
-    std::string image_path = "North_America_map.jpg";
-    cv::Mat img = cv::imread(image_path, cv::IMREAD_GRAYSCALE);
-    if (img.empty()) {
+    std::string image_path = "North_America_map.jpg";                                          // specify the path of the input image -> POSSIBLE IMPROVEMENT : input image as an argument of main() ?
+    cv::Mat img = cv::imread(image_path, cv::IMREAD_GRAYSCALE);                                // read it into an opencv matrix in grayscale
+    if (img.empty()) {                                                                         // error handling
         std::cerr << "Error: Could not read the image." << std::endl;
         return 1;
     }
-    std::vector<Point> points;
-    std::vector<Segment> segments;
+    std::vector<Point> points;                                                                 // initialize an empty set of points (for point sampling)
+    std::vector<Segment> segments;                                                             // initialize segments to bound the image
     segments.push_back(Segment(0, 0, img.cols, 0));
     segments.push_back(Segment(img.cols, 0, img.cols, img.rows));
     segments.push_back(Segment(img.cols, img.rows, 0, img.rows));
     segments.push_back(Segment(0, img.rows, 0, 0));
-    VoronoiDiagram vd;
-    construct_voronoi(points.begin(), points.end(), segments.begin(), segments.end(), &vd);
-    for (int i = 0; i < 5; ++i) {
-        for (int i = 0; i < 500; ++i) {
-            add_point(&points, &vd, &img);
-            vd.clear();
-            construct_voronoi(points.begin(), points.end(), segments.begin(), segments.end(), &vd);
+    VoronoiDiagram vd;                                                                         // initialize the Voronoi diagram (vd)
+    construct_voronoi(points.begin(), points.end(), segments.begin(), segments.end(), &vd);    // construct the initial Voronoi diagram using the empty set of points and the bounding box segments
+    for (int i = 0; i < 5; ++i) {                                                              // iterate 5 times: 
+        for (int i = 0; i < 500; ++i) {                                                        //    iterate 500 times:
+            add_point(&points, &vd, &img);                                                     //       add a point to the current set of points on the current vd of the current image
+            vd.clear();                                                                        //       clear the current vd
+            construct_voronoi(points.begin(), points.end(), segments.begin(), segments.end(), &vd); //  reconstruct it with the updated set of points
         }
-        cv::Mat copy = img.clone();
-        for (const auto& edge : vd.edges()) {
+        cv::Mat copy = img.clone();                                                            //    create a copy of the original image and visualize the vd edges on the copy
+        for (const auto& edge : vd.edges()) {                                                  //    by iterating over the finite edges of the vd
             if (edge.is_finite()) {
-                line(copy, cv::Point(edge.vertex0()->x(), edge.vertex0()->y()),
+                line(copy, cv::Point(edge.vertex0()->x(), edge.vertex0()->y()),                //    and drawing the corresponding line on the copy
                     cv::Point(edge.vertex1()->x(), edge.vertex1()->y()), cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
             }
         }
-        std::string name = "voronoi_cells_" + std::to_string(i+1) + ".jpg";
+        std::string name = "voronoi_cells_" + std::to_string(i+1) + ".jpg";                    //    save the resulting image in voronoi_diagram_nbOfIteration
         imwrite(name, copy);
     }
     return 0;
-}
