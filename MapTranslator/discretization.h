@@ -3,7 +3,6 @@
 
 #include <vector>
 #include <opencv2/opencv.hpp>
-#include <boost/foreach.hpp>
 #include <boost/geometry.hpp>
 #include <boost/polygon/voronoi.hpp>
 
@@ -60,18 +59,18 @@ namespace boost {
 
 class discretization {
 public:
-    void discretize(cv::Mat *input_image, cv::Mat *output_image, std::vector<cv::Point> *contour);
+    static void discretize(const cv::Mat *input_image, cv::Mat *output_image, const std::vector<cv::Point> *contour);
 
 private:
-    void contourToSegments(std::vector<cv::Point> *contour, std::vector<Segment> *segments);
-    void get_vertices(VoronoiCell *cell, std::vector<Point> *vertices);
-    void get_neighbors(VoronoiCell *cell, std::vector<Point> *points, std::vector<Point> *neighbors);
-    std::string polygonString(std::vector<Point> vertices);
-    double find_intersection_area(std::vector<Point> vertices1, std::vector<Point> vertices2);
-    double find_full_area(std::vector<Point> vertices);
-    uchar calculate_intensity(VoronoiCell *newCell, std::vector<Point> *newPoints, std::vector<Point> *points, VoronoiDiagram *vd, cv::Mat *img);
-    void add_point(std::vector<Point> *points, std::vector<Segment> *segments, VoronoiDiagram *vd, cv::Mat *img);
-    Point generate_point(std::vector<Segment> *segments);
+    void get_vertices(const VoronoiCell *cell, std::vector<Point> *vertices);
+    void get_neighbors(const VoronoiCell *cell, const std::vector<Point> *points, std::vector<Point> *neighbors);
+    std::string polygonString(const std::vector<Point> vertices);
+    double find_intersection_area(const std::vector<Point> vertices1, const std::vector<Point> vertices2);
+    double find_full_area(const std::vector<Point> vertices);
+    uchar calculate_intensity(const VoronoiCell *newCell, const std::vector<Point> *newPoints, const std::vector<Point> *points, const VoronoiDiagram *vd, const cv::Mat *img);
+    void add_point(std::vector<Point> *points, const std::vector<Segment> *segments, const VoronoiDiagram *vd, const cv::Mat *img);
+    Point generate_point(const std::vector<Segment> *segments);
+    void create_image(std::vector<Point> *points, const std::vector<Segment> *segments, const std::vector<cv::Point> *border, const cv::Mat *input_image, cv::Mat *output_image);
 };
 
 #endif // DISCRETIZATION_H
