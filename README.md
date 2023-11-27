@@ -3,6 +3,22 @@
 https://docs.google.com/document/d/12jGmhHy2zh67J_WpTOkt1yA4MaFLO7MbK4U43IU0HuQ/edit
 
 **Current state of the project:** <br>
+
+Working image discretization and contouring for one of the maps.
+
+<img src="https://github.com/mihaelagledacheva/Map-Translator/assets/113371744/aa3f00da-00ac-4251-b518-9ee226354d9b" style="display:inline-block; width:40%; margin-right:10px;">
+<img src="https://github.com/mihaelagledacheva/Map-Translator/assets/113371744/e4c859aa-815e-4ba8-8291-e0bf39f9fb76" style="display:inline-block; width:40%;">
+<img src="https://github.com/mihaelagledacheva/Map-Translator/assets/113371744/d0327649-1c4a-4b15-9b8f-9b38f589c40f" style="display:inline-block; width:40%; margin-right:10px;">
+<img src="https://github.com/mihaelagledacheva/Map-Translator/assets/113371744/6f77e828-debc-458c-aeb6-bc519f52dbe4" style="display:inline-block; width:40%;">
+
+**Next steps:**
+* test the code for the remaining maps and adjust the parameters as necessary
+* group Voronoi cells according to their intensity and remove any too small areas
+* implement code for adding point patterns
+
+***
+
+**Previous state of the project:** <br>
 <img src="https://github.com/mihaelagledacheva/Map-Translator/assets/113371744/7858fa67-7fcb-4b94-b54f-988aa72b5dbb" style="display:inline-block; width:30%; margin-right:10px;">
 <img src="https://github.com/mihaelagledacheva/Map-Translator/assets/113371744/8dbc94d4-f9cd-43a3-aef1-bf052252b68e" style="display:inline-block; width:30%; margin-right:10px;">
 <img src="https://github.com/mihaelagledacheva/Map-Translator/assets/113371744/296011ea-0680-4306-a16d-27b00694ca74" style="display:inline-block; width:30%;">
@@ -15,7 +31,7 @@ Whereas in the natural neighbours interpolation: the weights assigned to neighbo
 - using an extern NN implementation
 - or modifying calculate_intensity by including weights of neighboring points and using those weights to interpolate the intensity at the desired point
 
-**Next steps:**
+**Previous goals:**
 * test contours
 * include the natural neighbour method 
 * test the correctness of the current algorithm and improve its efficiency
