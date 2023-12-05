@@ -5,8 +5,12 @@
 
 class contouring {
 public:
-    static void contours(const cv::Mat *image, cv::Mat *output_image);
-    static void borders(const cv::Mat *image, std::vector<std::vector<cv::Point>> *contours);
+    void regions(const cv::Mat *input_image, std::vector<std::vector<cv::Point>> *contours, std::vector<cv::Mat> *masks);
+    void borders(const cv::Mat *input_image, std::vector<std::vector<cv::Point>> *contours, std::vector<cv::Mat> *masks);
+    void contours(const cv::Mat *input_image, cv::Mat *output_image);
+
+private:
+    void contour_mask(const cv::Mat *input_image, cv::Mat *output_image);
 };
 
 #endif // CONTOURING_H
