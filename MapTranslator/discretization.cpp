@@ -34,7 +34,7 @@ void discretization::create_image(
     }
 }
 
-void discretization::discretize_voronoi(
+void discretization::discretize_custom_sample(
     const std::vector<cv::Point> *border,
     const cv::Mat *input_image,
     cv::Mat *output_image)
@@ -45,10 +45,35 @@ void discretization::discretize_voronoi(
     create_image(&points, &segments, border, input_image, output_image);
 }
 
-void discretization::discretize_nn(
+void discretization::discretize_random_sample(
     const std::vector<cv::Point> *border,
-    const cv::Mat *input_image)
+    const cv::Mat *input_image,
+    cv::Mat *output_image)
 {
-    std::string xyz_file = "input_file.xyz";
-    s.uniform_sample(input_image, border, xyz_file);
+    std::vector<Point> points;
+    std::vector<Segment> segments;
+    s.random_sample(input_image, border, &points, &segments);
+    create_image(&points, &segments, border, input_image, output_image);
+}
+
+void discretization::discretize_uniform_sample(
+    const std::vector<cv::Point> *border,
+    const cv::Mat *input_image,
+    cv::Mat *output_image)
+{
+    std::vector<Point> points;
+    std::vector<Segment> segments;
+    s.uniform_sample(input_image, border, &points, &segments);
+    create_image(&points, &segments, border, input_image, output_image);
+}
+
+void discretization::discretize_grid_sample(
+    const std::vector<cv::Point> *border,
+    const cv::Mat *input_image,
+    cv::Mat *output_image)
+{
+    std::vector<Point> points;
+    std::vector<Segment> segments;
+    s.grid_sample(input_image, border, &points, &segments);
+    create_image(&points, &segments, border, input_image, output_image);
 }

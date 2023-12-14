@@ -60,7 +60,9 @@ namespace boost {
 class sampling {
 public:
     void custom_sample(const cv::Mat *input_image, const std::vector<cv::Point> *contour, std::vector<Point> *points, std::vector<Segment> *segments);
-    void uniform_sample(const cv::Mat *input_image, const std::vector<cv::Point> *contour, std::string xyz_file);
+    void random_sample(const cv::Mat *input_image, const std::vector<cv::Point> *contour, std::vector<Point> *points, std::vector<Segment> *segments);
+    void uniform_sample(const cv::Mat *input_image, const std::vector<cv::Point> *contour, std::vector<Point> *points, std::vector<Segment> *segments);
+    void grid_sample(const cv::Mat *input_image, const std::vector<cv::Point> *contour, std::vector<Point> *points, std::vector<Segment> *segments);
     void get_vertices(const VoronoiCell *cell, std::vector<Point> *vertices);
 
 private:

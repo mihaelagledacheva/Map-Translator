@@ -1,99 +1,98 @@
+// source of poisson_disk_sampling: https://stackoverflow.com/questions/32979413/infinite-blue-noise
+
 #include "patterns.h"
-#include "contouring.h"
 #include <cmath>
 #include <iostream>
+#include <vector>
+#include <algorithm>
 #include <random>
-#include <queue>
 
-contouring contour;
+const int MIN_AREA = 500;
 
-void patterns::generateBlueNoise(
-    const float targetDensity, 
-    cv::Mat *output) 
-{
-    // needs rework
-    std::default_random_engine rng(std::random_device{}());
-    std::uniform_real_distribution<float> distribution(0, 1);
+std::vector<PVector> patterns::poisson_disk_sampling(int k, int r, int size) {
+    std::vector<PVector> samples;
+    std::vector<PVector> active_list;
+    active_list.emplace_back(static_cast<float>(rand() % size), static_cast<float>(rand() % size));
 
-    const int width = output->cols;
-    const int height = output->rows;
-    const float minDistance = std::sqrt(1.0f / targetDensity);
-    const float cellSize = minDistance / std::sqrt(2.0f);
-    const int gridSizeX = static_cast<int>(std::ceil(width / cellSize));
-    const int gridSizeY = static_cast<int>(std::ceil(height / cellSize));
+    while (!active_list.empty()) {
+        int len = static_cast<int>(active_list.size());
+        int index = rand() % len;
+        std::swap(active_list[len - 1], active_list[index]);
+        PVector sample = active_list[len - 1];
+        bool found = false;
 
-    std::vector<cv::Point2i> grid(gridSizeX * gridSizeY, cv::Point2i(-1, -1));
-    std::vector<cv::Point2f> points;
-    std::queue<cv::Point2i> activeQueue;
+        for (int i = 0; i < k; ++i) {
+            float angle = 2 * M_PI * (rand() / static_cast<float>(RAND_MAX));
+            float radius = static_cast<float>(rand() % r) + r;
+            PVector dv(radius * cos(angle), radius * sin(angle));
+            PVector new_sample = {sample.x + dv.x, sample.y + dv.y};
 
-    cv::Point2f initialPoint(distribution(rng) * width, distribution(rng) * height);
-    activeQueue.push(cv::Point2i(static_cast<int>(initialPoint.x / cellSize),
-                                  static_cast<int>(initialPoint.y / cellSize)));
-    points.push_back(initialPoint);
-
-    while (!activeQueue.empty()) {
-        cv::Point2i currentCell = activeQueue.front();
-        activeQueue.pop();
-
-        for (int i = 0; i < 30; ++i) {
-            float angle = distribution(rng) * 2.0f * static_cast<float>(CV_PI);
-            float distance = distribution(rng) * minDistance + minDistance;
-            cv::Point2f candidatePos = points.back() + cv::Point2f(std::cos(angle), std::sin(angle)) * distance;
-
-            int candidateCellX = static_cast<int>(candidatePos.x / cellSize);
-            int candidateCellY = static_cast<int>(candidatePos.y / cellSize);
-
-            if (candidateCellX >= 0 && candidateCellX < gridSizeX &&
-                candidateCellY >= 0 && candidateCellY < gridSizeY &&
-                grid[candidateCellY * gridSizeX + candidateCellX] == cv::Point2i(-1, -1)) {
-                activeQueue.push(cv::Point2i(candidateCellX, candidateCellY));
-                grid[candidateCellY * gridSizeX + candidateCellX] = cv::Point2i(static_cast<int>(points.size()) - 1, 0);
-                points.push_back(candidatePos);
+            bool ok = true;
+            for (const auto& existing_sample : samples) {
+                float distance = std::sqrt((new_sample.x - existing_sample.x) * (new_sample.x - existing_sample.x) +
+                                           (new_sample.y - existing_sample.y) * (new_sample.y - existing_sample.y));
+                if (distance <= r) {
+                    ok = false;
+                    break;
+                }
             }
+
+            if (ok && new_sample.x >= 0 && new_sample.x < size && new_sample.y >= 0 && new_sample.y < size) {
+                samples.push_back(new_sample);
+                active_list.push_back(new_sample);
+                len++;
+                found = true;
+            }
+        }
+
+        if (!found)
+            active_list.pop_back();
+    }
+
+    return samples;
+}
+
+void patterns::create_patterns(const cv::Mat *input_image, cv::Mat *output_image) {
+    std::vector<cv::Mat> masks;
+    std::vector<std::vector<cv::Point>> all_contours;
+    for (int i = 1; i < 10; i++) {
+        cv::Mat binaryMask = ((*input_image) >= 25*i+1) & ((*input_image) <= 25*(i+1));
+        cv::Mat mask = cv::Mat::ones(input_image->size(), CV_8UC1) * 255;
+        input_image->copyTo(mask, binaryMask);
+        mask.setTo(0, (mask != 255));
+
+        if (cv::countNonZero(mask != 255) > 0) {
+            cv::bitwise_not(mask, mask);
+            std::vector<std::vector<cv::Point>> contours;
+            cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+            mask = cv::Mat::ones(input_image->size(), CV_8UC1) * 255;
+            for (int i = 0; i < contours.size(); i++) {
+                if (cv::contourArea(contours[i]) > MIN_AREA) {
+                    cv::fillPoly(mask, contours[i], cv::Scalar(0));
+                    all_contours.emplace_back(contours[i]);
+                }
+            }
+
+            int SIZE = std::max(input_image->rows, input_image->cols);
+            int k = 30;
+            int r = 5 + 2 * i;
+            std::vector<PVector> samples = poisson_disk_sampling(k, r, SIZE);
+
+            cv::Mat pattern(SIZE, SIZE, CV_8UC1, cv::Scalar(254));
+            for (const auto& sample : samples) {
+                cv::Point point(static_cast<int>(sample.x), static_cast<int>(sample.y));
+                cv::circle(pattern, point, 2, cv::Scalar(1), -1);
+            }
+            cv::Rect roiRect(0, 0, input_image->cols, input_image->rows);
+            pattern = pattern(roiRect).clone();
+            cv::bitwise_or(pattern, mask, mask);
+            masks.emplace_back(mask);
         }
     }
 
-    for (const auto& point : points) {
-        cv::circle((*output), cv::Point(static_cast<int>(point.x), static_cast<int>(point.y)), 10, cv::Scalar(1), -1);
-    }
-}
-
-cv::Point patterns::pointInContour(const std::vector<cv::Point>& contour) {
-    cv::Rect boundingRect = cv::boundingRect(contour);
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> randomX(boundingRect.x + 1, boundingRect.x + boundingRect.width - 2);
-    std::uniform_int_distribution<int> randomY(boundingRect.y + 1, boundingRect.y + boundingRect.height - 2);
-
-    cv::Point randomPoint;
-    do {
-        randomPoint.x = randomX(gen);
-        randomPoint.y = randomY(gen);
-    } while (cv::pointPolygonTest(contour, randomPoint, false) <= 0);
-
-    return randomPoint;
-}
-
-void patterns::create_patterns(
-    const cv::Mat *input_image,
-    cv::Mat *output_image)
-{
-    std::vector<std::vector<cv::Point>> contours;
-    std::vector<cv::Mat> masks;
-    contour.regions(input_image, &contours, &masks);
-    for (int i = 0; i < contours.size(); i++) {
-        cv::Point point = pointInContour(contours[i]);
-        uchar intensity = input_image->at<uchar>(point.y, point.x);
-        float density = intensity / 255;
-        cv::Mat intermediate = cv::Mat::ones(input_image->size(), CV_8UC1) * 254;
-        generateBlueNoise(density, &intermediate);
-        cv::bitwise_or(intermediate, masks[i], masks[i]);
-        cv::imwrite("imh.jpg", masks[i]);
-    }
     for (int i = 0; i < masks.size(); i++) {
         cv::bitwise_not(masks[i], masks[i]);
         cv::bitwise_xor((*output_image), masks[i], (*output_image));
     }
-    contour.contours(input_image, output_image);
+    cv::drawContours((*output_image), all_contours, -1, cv::Scalar(1), 1, cv::LINE_AA);
 }

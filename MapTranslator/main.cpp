@@ -2,14 +2,32 @@
 #include "contouring.h"
 #include "patterns.h"
 
-const std::string IMAGE_PATH = "map_0.jpg";
-const int TRANSLATION = 1;
-
 contouring c;
 discretization d;
 patterns p;
 
-int main() {
+double evaluate_similarity(const cv::Mat *img1, const cv::Mat *img2) {
+    int totalPixels = img1->rows * img1->cols;
+    int identicalPixels = 0;
+    for (int i = 0; i < img1->rows; ++i) {
+        for (int j = 0; j < img1->cols; ++j) {
+            if (std::abs(img1->at<uchar>(i, j) - img2->at<uchar>(i, j)) <= 1) {
+                identicalPixels++;
+            }
+        }
+    }
+    double percentageIdentical = (static_cast<double>(identicalPixels) / totalPixels) * 100.0;
+    return percentageIdentical;
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 3) {
+        std::cerr << "Usage: " << argv[0] << " <image_path> <translation>" << std::endl;
+        return -1;
+    }
+    const std::string IMAGE_PATH = argv[1];
+    const int TRANSLATION = std::stoi(argv[2]);
+
     cv::Mat map = cv::imread(IMAGE_PATH, cv::IMREAD_GRAYSCALE);                                // read it into an opencv matrix in grayscale
     if (map.empty()) {                                                                         // error handling
         std::cerr << "Error: Could not read the image." << std::endl;
@@ -29,10 +47,11 @@ int main() {
         }
         for (int i = 0; i < contours.size(); i++) {
             cv::Mat intermediate = cv::Mat::ones(map.size(), CV_8UC1) * 254;
-            d.discretize_voronoi(&contours[i], &map, &intermediate);
+            d.discretize_custom_sample(&contours[i], &map, &intermediate);
             cv::bitwise_or(intermediate, masks[i], masks[i]);
             intermediate = cv::Mat::ones(map.size(), CV_8UC1) * 254;
-            // create patterns
+            p.create_patterns(&masks[i], &intermediate);
+            masks[i] = intermediate.clone();
         }
         for (int i = 0; i < masks.size(); i++) {
             cv::bitwise_not(masks[i], masks[i]);
@@ -43,6 +62,6 @@ int main() {
         }
     }
     
-    cv::imwrite("result.jpg", result);                                                         // save the resulting image
+    cv::imwrite("result.png", result);
     return 0;
 }

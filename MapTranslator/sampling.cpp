@@ -4,7 +4,7 @@
 #include <random>
 
 const int INTENSITY_DIFF = 25;
-const int SAMPLE_SIZE = 100;
+int SAMPLE_SIZE = 1000;
 
 // Extract the vertices of a Voronoi cell
 void sampling::get_vertices(                                                // arguments :
@@ -183,26 +183,27 @@ void sampling::add_point(                                                   // a
     const cv::Mat *img)                                                     // an image (an openCV matrix)
 {
     Point newPoint = generate_point(segments);                              // generate a random point
-    if (img->at<uchar>(newPoint.y, newPoint.x) > 50) {
-        std::vector<Point> newPoints(*points);                                  // create a copy of the existing points
-        newPoints.push_back(newPoint);                                          // add the newly generated point to the copy
-        VoronoiDiagram new_vd;                                                  // initialize a new Voronoi diagram
+    if (img->at<uchar>(newPoint.y, newPoint.x) > 20) {
+        std::vector<Point> newPoints(*points);                              // create a copy of the existing points
+        newPoints.emplace_back(newPoint);                                   // add the newly generated point to the copy
+        VoronoiDiagram new_vd;                                              // initialize a new Voronoi diagram
         boost::polygon::construct_voronoi(
             newPoints.begin(), newPoints.end(), 
-            segments->begin(), segments->end(), &new_vd);                       // construct the new diagram using the new set of points and the bounding segments
-        VoronoiCell newCell = new_vd.cells().back();                            // initialize a new Voronoi cell in order to :
-        for (const auto &cell : new_vd.cells()) {                               // search over the Voronoi cells of the new diagram
+            segments->begin(), segments->end(), &new_vd);                   // construct the new diagram using the new set of points and the bounding segments
+        VoronoiCell newCell = new_vd.cells().back();                        // initialize a new Voronoi cell in order to :
+        for (const auto &cell : new_vd.cells()) {                           // search over the Voronoi cells of the new diagram
             if (newPoints[cell.source_index()].x == newPoint.x && 
-                newPoints[cell.source_index()].y == newPoint.y) {               // look for the cell corresponding to the new point
-                newCell = cell;                                                 // and retrieve it
+                newPoints[cell.source_index()].y == newPoint.y) {           // look for the cell corresponding to the new point
+                newCell = cell;                                             // and retrieve it
                 break;
             }
         }
-        uchar realIntensity = img->at<uchar>(newPoint.y, newPoint.x);           // retrieve the real intensity value of the newly added point from the image
+        uchar realIntensity = img->at<uchar>(newPoint.y, newPoint.x);       // retrieve the real intensity value of the newly added point from the image
         uchar expectedIntensity = 
-            calculate_intensity(&newCell, &newPoints, points, vd, img);         // calculate the expected intensity using calculate_intensity  __ why not use the new_vd instead of vd??
-        if (std::abs(realIntensity - expectedIntensity) > INTENSITY_DIFF) {     // compare the absolute difference between the real and expected intensity values
-            points->push_back(newPoint);                                        // if the difference is significant, add the new point to the original set of points
+            calculate_intensity(&newCell, &newPoints, points, vd, img);     // calculate the expected intensity using calculate_intensity  __ why not use the new_vd instead of vd??
+        if (std::abs(realIntensity - expectedIntensity) > INTENSITY_DIFF) { // compare the absolute difference between the real and expected intensity values
+            points->emplace_back(newPoint);                                 // if the difference is significant, add the new point to the original set of points
+            SAMPLE_SIZE += 1;
         }
     }
 }
@@ -213,6 +214,10 @@ void sampling::custom_sample(
     std::vector<Point> *points,
     std::vector<Segment> *segments)
 {
+    SAMPLE_SIZE = 0;
+    points->clear();
+    segments->clear();
+
     cv::Rect rect = cv::boundingRect((*contour));
     segments->emplace_back(rect.x, rect.y, rect.x + rect.width, rect.y);
     segments->emplace_back(rect.x + rect.width, rect.y, rect.x + rect.width, rect.y + rect.height);
@@ -222,7 +227,7 @@ void sampling::custom_sample(
     boost::polygon::construct_voronoi(
         points->begin(), points->end(), 
         segments->begin(), segments->end(), &vd);                           // construct the initial Voronoi diagram using the empty set of points and the bounding box segments
-    int iterations = rect.width * rect.height / 100;
+    int iterations = rect.width * rect.height / 1000;
     for (int i = 0; i < iterations; i++) {                                  // iterate n times:
         add_point(points, segments, &vd, input_image);                      // add a point to the current set of points on the current vd of the current image
         vd.clear();                                                         // clear the current vd
@@ -232,28 +237,78 @@ void sampling::custom_sample(
     }
 }
 
-void sampling::uniform_sample(
+void sampling::random_sample(
     const cv::Mat *input_image, 
     const std::vector<cv::Point> *contour, 
-    std::string xyz_file)
+    std::vector<Point> *points,
+    std::vector<Segment> *segments)
 {
+    points->clear();
+    segments->clear();
+
     cv::Rect rect = cv::boundingRect((*contour));
-    std::vector<cv::Point> points;
+    segments->emplace_back(rect.x, rect.y, rect.x + rect.width, rect.y);
+    segments->emplace_back(rect.x + rect.width, rect.y, rect.x + rect.width, rect.y + rect.height);
+    segments->emplace_back(rect.x + rect.width, rect.y + rect.height, rect.x, rect.y + rect.height);
+    segments->emplace_back(rect.x, rect.y + rect.height, rect.x, rect.y);
 
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> distX(rect.x, rect.x + rect.width);
-    std::uniform_real_distribution<float> distY(rect.y, rect.y + rect.height);
+    
+    for (int i = 0; i < SAMPLE_SIZE; ++i) {
+        Point p(rect.x + gen() % rect.width, rect.y + gen() % rect.height);
+        points->emplace_back(p);
+    }
+}
+
+void sampling::uniform_sample(
+    const cv::Mat *input_image, 
+    const std::vector<cv::Point> *contour, 
+    std::vector<Point> *points,
+    std::vector<Segment> *segments)
+{
+    points->clear();
+    segments->clear();
+
+    cv::Rect rect = cv::boundingRect((*contour));
+    segments->emplace_back(rect.x, rect.y, rect.x + rect.width, rect.y);
+    segments->emplace_back(rect.x + rect.width, rect.y, rect.x + rect.width, rect.y + rect.height);
+    segments->emplace_back(rect.x + rect.width, rect.y + rect.height, rect.x, rect.y + rect.height);
+    segments->emplace_back(rect.x, rect.y + rect.height, rect.x, rect.y);
+
+    
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dist_x(rect.x, rect.x + rect.width);
+    std::uniform_int_distribution<int> dist_y(rect.y, rect.y + rect.height);
 
     for (int i = 0; i < SAMPLE_SIZE; ++i) {
-        int x = static_cast<int>(distX(gen));
-        int y = static_cast<int>(distY(gen));
-        points.emplace_back(x, y);
+        Point p(dist_x(gen), p.y = dist_y(gen));
+        points->emplace_back(p);
     }
+}
 
-    std::ofstream outFile(xyz_file);
-    for (const auto& point : points) {
-        outFile << point.x << " " << point.y << " " << input_image->at<uchar>(point.y, point.x) << "\n";
+void sampling::grid_sample(
+    const cv::Mat *input_image, 
+    const std::vector<cv::Point> *contour, 
+    std::vector<Point> *points,
+    std::vector<Segment> *segments)
+{
+    points->clear();
+    segments->clear();
+
+    cv::Rect rect = cv::boundingRect((*contour));
+    segments->emplace_back(rect.x, rect.y, rect.x + rect.width, rect.y);
+    segments->emplace_back(rect.x + rect.width, rect.y, rect.x + rect.width, rect.y + rect.height);
+    segments->emplace_back(rect.x + rect.width, rect.y + rect.height, rect.x, rect.y + rect.height);
+    segments->emplace_back(rect.x, rect.y + rect.height, rect.x, rect.y);
+
+    int grid_spacing_x = std::max(1, rect.width / static_cast<int>(std::sqrt(SAMPLE_SIZE)));
+    int grid_spacing_y = std::max(1, rect.height / static_cast<int>(std::sqrt(SAMPLE_SIZE)));
+
+    for (int y = rect.y + 1; y < rect.y + rect.height; y += grid_spacing_y) {
+        for (int x = rect.x + 1; x < rect.x + rect.width; x += grid_spacing_x) {
+            points->emplace_back(Point(x, y));
+        }
     }
-    outFile.close();
 }
