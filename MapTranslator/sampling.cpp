@@ -203,7 +203,6 @@ void sampling::add_point(                                                   // a
             calculate_intensity(&newCell, &newPoints, points, vd, img);     // calculate the expected intensity using calculate_intensity  __ why not use the new_vd instead of vd??
         if (std::abs(realIntensity - expectedIntensity) > INTENSITY_DIFF) { // compare the absolute difference between the real and expected intensity values
             points->emplace_back(newPoint);                                 // if the difference is significant, add the new point to the original set of points
-            SAMPLE_SIZE += 1;
         }
     }
 }
@@ -214,7 +213,6 @@ void sampling::custom_sample(
     std::vector<Point> *points,
     std::vector<Segment> *segments)
 {
-    SAMPLE_SIZE = 0;
     points->clear();
     segments->clear();
 

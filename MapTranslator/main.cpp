@@ -6,7 +6,7 @@ contouring c;
 discretization d;
 patterns p;
 
-double evaluate_similarity(const cv::Mat *img1, const cv::Mat *img2) {
+void evaluate_similarity(const cv::Mat *img1, const cv::Mat *img2) {
     int totalPixels = img1->rows * img1->cols;
     int identicalPixels = 0;
     for (int i = 0; i < img1->rows; ++i) {
@@ -17,7 +17,18 @@ double evaluate_similarity(const cv::Mat *img1, const cv::Mat *img2) {
         }
     }
     double percentageIdentical = (static_cast<double>(identicalPixels) / totalPixels) * 100.0;
-    return percentageIdentical;
+    std::cout << "Similarity: " << percentageIdentical << std::endl;
+
+    double mse = 0;
+    for (int i = 0; i < img1->rows; ++i) {
+        for (int j = 0; j < img1->cols; ++j) {
+            int pixel1 = static_cast<int>(img1->at<uchar>(i, j));
+            int pixel2 = static_cast<int>(img2->at<uchar>(i, j));
+            mse += ((pixel1 - pixel2) * (pixel1 - pixel2));
+        }
+    }
+    mse = mse / totalPixels;
+    std::cout << "MSE: " << mse << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -46,17 +57,20 @@ int main(int argc, char* argv[]) {
             c.regions(&map, &contours, &masks);
         }
         for (int i = 0; i < contours.size(); i++) {
-            cv::Mat intermediate = cv::Mat::ones(map.size(), CV_8UC1) * 254;
-            d.discretize_custom_sample(&contours[i], &map, &intermediate);
-            cv::bitwise_or(intermediate, masks[i], masks[i]);
-            intermediate = cv::Mat::ones(map.size(), CV_8UC1) * 254;
-            p.create_patterns(&masks[i], &intermediate);
-            masks[i] = intermediate.clone();
+            cv::Mat blank = cv::Mat::ones(map.size(), CV_8UC1) * 254;
+            d.discretize_random_sample(&contours[i], &map, &blank);
+            cv::bitwise_or(blank, masks[i], masks[i]);
         }
+        cv::Mat intermediate = cv::Mat::ones(map.size(), CV_8UC1) * 254;
         for (int i = 0; i < masks.size(); i++) {
             cv::bitwise_not(masks[i], masks[i]);
-            cv::bitwise_xor(result, masks[i], result);
+            cv::bitwise_xor(result, masks[i], intermediate);
         }
+        // d.discretize_nn(&map, &intermediate);
+        // evaluate_similarity(&map, &intermediate);
+        // cv::imwrite("discretization.png", intermediate);
+        cv::Mat blank = cv::Mat::ones(map.size(), CV_8UC1) * 254;
+        p.create_patterns(&intermediate, &result);
         if (TRANSLATION == 2) {        
             c.contours(&map, &result);
         }
